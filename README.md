@@ -11,7 +11,7 @@ Often developers need to model a multi-step process that is reusable:  maybe the
 
 For example, an insurance system might have several similar flows for processing flows from different sources--partner EDI, consumer web site, provider applications--where many of the steps involved are largely reusable.
 
-A Template Method basically uses inheritance to share common logic, while varying the implementation of steps by overriding methods representing particular steps.  As the GOF have said and most believe today, however, one should "favor composition over inheritance."  Some have gone further to say the "Inheritance is a code smell."
+A Template Method basically uses inheritance to share common logic, while varying the implementation of steps by overriding methods representing particular steps.  As the GOF have said and most believe today, however, one should "favor composition over inheritance."  Some have gone further to say the "Inheritance is a code smell." (Someone Tweeted this, I can't find it now)
 
 The essential problem with using inheritance with the Template Method is that the class tree can get pretty ugly if one needs to vary the implementation of steps AND the flow of steps.
 
@@ -32,6 +32,7 @@ Here's how you define a flow with by extending the Flo class and wiring together
   end
   ImportUsersFlo.new(RowMapperCSVFile.new(...), SaveARFromCsv.new(req_fields, ...)).go
 ```
+
 
 ```ruby
   # As an Instance
