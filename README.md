@@ -7,7 +7,7 @@ Flo
 Simple interface for creating extensible multi-step procedures using composition.  Flo attempts to provide a fluent interface for creating step-by-step processes or algorithms using composition rather than inheritance, and an interface and conventions for interaction between steps.  Flo is probably most applicable to batch jobs or background processing, but it is certainly not limited to that.
 
 #### The Problem
-Often developers need to model a multi-step process that is reusable:  maybe the steps are the same but the execution of the steps very for different contexts, or maybe the step flow changes slightly in some cases but the logic of the steps is largely reused.  For this situation developers often implement a Template Method pattern.
+Often developers need to model a multi-step process that is reusable:  maybe the steps are the same but the execution of the steps vary for different contexts, or maybe the step flow changes slightly in some cases but the logic of the steps is largely reused.  For this situation developers often implement a Template Method pattern.
 
 For example, an insurance system might have several similar flows for processing flows from different sources--partner EDI, consumer web site, provider applications--where many of the steps involved are largely reusable.
 
@@ -27,21 +27,21 @@ Here's how you define a flow with by extending the Flo class and wiring together
   class ImportUsersFlo < Flo
     def initialize(step1, step2) 
       # name?
-      start >> step1 >> -> (_.status == 'OK' ? step2 : HandleErrorGeneric.new)
+      start >> step1 >> -> (step, ctx) {step.status == 'OK' ? step2 : HandleErrorGeneric.new)
     end
   end
-  ImportUsersFlo.new(RowMapperCSVFile.new(...), SaveARFromCsv.new(req_fields, ...)).go
+  ImportUsersFlo.new(RowMapperCSVFile.new(...), SaveARFromCsv.new(req_fields, ...)).start!
 ```
+
+Note that, since the step implementations are "injected" in the constructor, different contexts (i.e. test) can easily plug in alternates.  Step implementations have their own class hierarchy for shared processing behavior.
 
 
 ```ruby
   # As an Instance
 
-  Flow.new >> step1 >> -> (_.status == 'OK' ? step2 : HandleErrorGeneric.new).go
+  Flow.new >> step1 >> -> (step, ctx) {step.status == 'OK' ? step2 : HandleErrorGeneric.new)}.start!
 
 ```
-
-Note that, since the step implementations are "injected" in the constructor, different contexts (i.e. test) can easily plug in alternates.  Step implementations have their own class hierarchy for shared processing behavior.
 
 #### Extending flows
 How to extend a flow?  Just insert steps etc.
