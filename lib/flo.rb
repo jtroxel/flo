@@ -9,18 +9,17 @@ require 'flo/step_action'
 module Flo
   class Flo
 
-    attr_accessor :index, :step, :ctx, :head, :tail
+    attr_accessor :index, :step, :ctx, :head, :cursor
 
+    # ctx = member for flow-wide data
+    # - flow
+    #   - errors, info lists.
+    #   - status
     def initialize(options=nil)
       @index = {}
-      @ctx = {} # member for flow-wide data
-      #   errors, info lists?
-      @step = {} # data about the last step, re-assigned with results of each step
-      #   - errors, info lists.
-      #   - input, output.
-      #   - status
-      @head
-      @tail
+      @ctx = options || {}
+      @head # First step
+      @cursor # last step, either added or executed depending
     end
 
     ##
@@ -42,19 +41,17 @@ module Flo
       end
 
       step = FloStep.new(next_target, step_key)
-      @tail = step
       @head ||= step
-      @index[step.name] = step
+      @cursor << step if @cursor # concat the step onto the last one
+      @cursor = step
+      @index[step.name] = step # Add into index by name
       self
     end
 
     def start!(flo_init = nil)
       @ctx = flo_init if flo_init
-      do_step(@head, {}, @ctx)
-    end
-
-    def do_step(step, step_data, flo_data)
-      ret = step.execute(step_data, flo_data)
+      @cursor = @head
+      @cursor.execute({}, @ctx)
     end
 
   end
@@ -70,12 +67,19 @@ module Flo
       @name = name || @action.name
     end
 
-    def >> (step)
+    def << (step)
       @next_steps << step
     end
 
-    def execute(step, flo)
-      action.execute(step, flo)
+    def execute(input, ctx)
+      output = action.execute(input, ctx)
+      # If the execution of the step results in another step, do that
+      while output.kind_of?(FloStep) || output.respond_to?(:execute)
+        output = output.execute(input, ctx)
+      end
+      next_steps.each do |step|
+        output = step.execute(output, ctx)
+      end
     end
 
   end

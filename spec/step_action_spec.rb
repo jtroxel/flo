@@ -1,8 +1,8 @@
 require "rspec"
 require 'flo'
 
-describe "StepProcessor" do
-  describe "#instance" do
+describe "StepAction" do
+  describe ".from_obj" do
     it "creates FloStepAction if responds to flo_step" do
       @proc_class = Class.new do
         def flo_step
@@ -12,6 +12,7 @@ describe "StepProcessor" do
       action = StepAction.from_obj(@proc_class.new)
       action.should be_a_kind_of FloStepAction
     end
+
     it "creates a ProcAction if typeof Proc" do
       proc = -> { puts "hi" }
       action = StepAction.from_obj(proc)
@@ -19,13 +20,16 @@ describe "StepProcessor" do
       action.handler.should eql proc
     end
   end
-  describe "ProcProcessor" do
-    it "handles execute by running the proc" do
-      foo = false
-      bar = ->(input, ctx) { foo = true }
-      action = StepAction.from_obj(bar)
-      action.execute(nil, nil)
-      foo.should be_true
+
+  describe "ProcStepAction" do
+    describe "#execute" do
+      it "runs the proc" do
+        foo = false
+        bar = ->(input, ctx) { foo = true }
+        action = StepAction.from_obj(bar)
+        action.execute(nil, nil)
+        foo.should be_true
+      end
     end
   end
 end
