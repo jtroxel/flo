@@ -6,6 +6,8 @@ Flo
 
 Flo is a simple library for composing extensible multi-step procedures.  Flo attempts to provide a fluent interface for creating step-by-step processes or algorithms using plugable steps, and an interface and conventions for interaction between the steps.  Flo is probably most applicable to batch jobs or background processing, but it is certainly not limited to that.
 
+See the [introductory blog post|http://www.codecraftblog.com/2012/08/building-procedures-with-composition.html] for more background on the inspiration for Flo.
+
 #### What Flo is
  - A fluent interface for building sequences (or directed graphs) of pluggable processing steps
  - A tool for creatomg complex Strategy patterns
