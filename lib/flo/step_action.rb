@@ -5,7 +5,6 @@
 # - name: generate a unique name for the action
 #
 
-
 class StepAction
   attr_accessor :handler
 
