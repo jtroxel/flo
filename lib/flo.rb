@@ -18,7 +18,7 @@ module Flo
     #   - status
     def initialize(options=nil)
       @index = {}
-      @ctx = options || {}
+      @ctx = options || {flow: {}, step: {}}
       @head # First step
       @cursor # last step, either added or executed depending
     end
@@ -39,11 +39,14 @@ module Flo
         end
         step_key = name
         next_action = next_target.values[0]
+        options = next_target
+        #options.delete(step_key)
       else #target is an object to be executed
         next_action = next_target
+        options = nil
       end
 
-      step = FloStep.new(next_action, step_key)
+      step = FloStep.new(next_action, step_key, options)
       @head ||= step
       @cursor << step if @cursor # concat the step onto the last one
       @cursor = step
@@ -66,12 +69,13 @@ module Flo
     SUCCESS = 'success'
 
     attr_accessor :next_steps, :name, :action
+    attr_reader :err_stop
 
-    def initialize(action, name=nil, err_stop=false)
+    def initialize(action, name=nil, options=nil)
       @next_steps = []
       @action = StepAction.from_obj(action)
       @name = name || @action.name
-      @err_stop = err_stop
+      @err_stop = options && options[:err_stop] || false
     end
 
     def << (step)
@@ -94,6 +98,7 @@ module Flo
       if @err_stop && ctx[:step][:status] == ERROR
         raise "Stop On Error" # TODO: create an exception and add handling
       end
+      output
     end
 
     def status(ctx, stat)

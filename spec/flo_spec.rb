@@ -8,6 +8,7 @@ describe Flo do
     @proc_class = Class.new do
       def flo_step(input, ctx)
         puts "New Processor!"
+        input
       end
     end
     @simple_proc_step = @proc_class.new
@@ -67,7 +68,7 @@ describe Flo do
     end
     # >> { my_step1: step, err_stop: true }
     it "should add stop actions" do
-      @flo >> { my_step1: step, err_stop: true }
+      @flo >> { my_step1: @simple_proc_step, err_stop: true }
 
     end
 
@@ -102,7 +103,7 @@ describe Flo do
           @flo.start!
         end
         describe "should pass results from first step into second" do
-          specify { @passed_input.should_not be_empty }
+          specify { @passed_input.should_not be_nil }
           specify { @passed_input[:my_data].should eql 'hello!' }
         end
       end
@@ -111,8 +112,9 @@ describe Flo do
       describe "ERR_STOP: >> my_step1: MyHandler1.new, err_stop: true >> step_two" do
         before do
           step = @simple_proc_step
-          def step.execute(input, ctx)
-            status(ctx, FloStep::ERROR)
+          def step.flo_step(input, ctx)
+            # TODO:  how do steps access convenience methods?
+            status(ctx, Flo::FloStep::ERROR)
             input
           end
           @step2 = @proc_class.new
@@ -129,6 +131,15 @@ describe Flo do
   describe Flo::FloStep do
     before do
       @flo = Flo::Flo.new
+    end
+
+    context "#initialize" do
+      before do
+        @step = Flo::FloStep.new(@proc_class.new, "step name", {err_stop: true})
+      end
+
+      specify { @step.err_stop.should be_true}
+      specify { @step.name.should eql "step name"}
     end
 
     context "#execute" do
