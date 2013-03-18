@@ -1,7 +1,7 @@
 # Internal: Abstract class for step processors, factory
 #
-# A StepAction generally wraps an object that acts on flow data.  The contract for StepAction consists of the following
-# - execute: perform whatever on the flow/step data
+# A StepAction generally wraps an object (handler) )that acts on flow data.  The contract for StepAction consists of the following
+# - execute: perform whatever on the flow/step data, invoke the handler
 # - name: generate a unique name for the action
 #
 
@@ -31,17 +31,21 @@ class StepAction
 
 end
 
+##
+# a StepAction that wraps a hendler that responds to flo_step
 class FloStepAction < StepAction
 
   def execute(input, ctx)
-    @handler.flo_step(input, ctx)
+    @handler.flo_step(input, ctx, self)
   end
 end
 
+##
+# a StepAction that invokes a proc
 class ProcStepAction < FloStepAction
 
   def execute(input, ctx)
-    @handler.call(input, ctx)
+    @handler.call(input, ctx, self)
   end
 
   def name

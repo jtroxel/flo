@@ -2,7 +2,7 @@ require "rspec"
 require 'flo'
 
 describe "StepAction" do
-  describe ".from_obj" do
+  describe "#from_obj" do
     it "creates FloStepAction if responds to flo_step" do
       @proc_class = Class.new do
         def flo_step

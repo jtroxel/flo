@@ -9,7 +9,7 @@ require 'flo/step_action'
 module Flo
   class Flo
 
-    attr_accessor :index, :step, :ctx, :head, :cursor
+    attr_accessor :index, :ctx, :head, :cursor
 
     # ctx = member for flow-wide data
     # - flow
@@ -63,6 +63,8 @@ module Flo
   end
 
 
+  ##
+  # A node in the execution graph of a flo.  Keeps a StepAction and members to organize the action in the flo
   class FloStep
 
     ERROR = 'error'
@@ -88,6 +90,7 @@ module Flo
       while output.kind_of?(FloStep) || output.respond_to?(:execute)
         output = output.execute(input, ctx)
       end
+      # otherwise continue on down to the next step
       next_steps.each do |step|
         output = step.execute(output, ctx)
       end

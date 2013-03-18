@@ -89,7 +89,7 @@ describe Flo do
 
     it "should pass empty input" do
       passed_input = nil
-      @flo >> ->(input, ctx) { passed_input = input }
+      @flo >> ->(input, ctx, action) { passed_input = input }
       @flo.start!
       passed_input.should be_empty
     end
@@ -99,7 +99,7 @@ describe Flo do
       describe " >> step_one >> step_two" do
         before do
           @passed_input = nil
-          @flo >> ->(input, ctx) { {my_data: 'hello!'} } >> ->(input, ctx) { @passed_input = input }
+          @flo >> ->(input, ctx, action) { {my_data: 'hello!'} } >> ->(input, ctx, action) { @passed_input = input }
           @flo.start!
         end
         describe "should pass results from first step into second" do
@@ -112,16 +112,16 @@ describe Flo do
       describe "ERR_STOP: >> my_step1: MyHandler1.new, err_stop: true >> step_two" do
         before do
           step = @simple_proc_step
-          def step.flo_step(input, ctx)
-            # TODO:  how do steps access convenience methods?
-            status(ctx, Flo::FloStep::ERROR)
+          def step.flo_step(input, ctx, action)
             input
           end
           @step2 = @proc_class.new
           @flo >> { my_step1: step, err_stop: true } >> @step2
-          @flo.start!
+          # Stuff an error status into the context
+          @flo.head.status(@flo.ctx, Flo::FloStep::ERROR)
         end
         it "should stop on error status" do
+          expect { @flo.start! }.to raise_error
           @step2.should_not_receive :execute
         end
       end
@@ -145,10 +145,10 @@ describe Flo do
     context "#execute" do
       before do
         @proc_return
-        @flo >> ->(input, ctx) do
+        @flo >> ->(input, ctx, action) do
           # Example of conditional logic that returns a FloStep
           if true
-            Flo::FloStep.new(->(i, c) { @proc_return = 'hello!' })
+            Flo::FloStep.new(->(i, c, a) { @proc_return = 'hello!' })
           end
         end
         @flo.start!

@@ -10,7 +10,7 @@ See the [introductory blog post](http://www.codecraftblog.com/2012/08/building-p
 
 #### What Flo is
  - A fluent interface for building sequences (or directed graphs) of pluggable processing steps
- - A tool for creatomg complex Strategy patterns
+ - A tool for creating complex Strategy patterns
  - A framework for batch processing
 
 #### Compose-able Flows
