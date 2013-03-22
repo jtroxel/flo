@@ -17,8 +17,8 @@ module Flo
     # - step
     #   - status
     def initialize(options=nil)
-      @index = {}
-      @ctx = options || {flow: {}, step: {}}
+      @index = { }
+      @ctx = options || { flow: { }, step: { } }
       @head # First step
       @cursor # last step, either added or executed depending
     end
@@ -54,10 +54,18 @@ module Flo
       self
     end
 
+    ##
+    # Wrap the last step in an iterating step, repeat until next action returns null
+    def *
+      @cursor = IteratingFloStep.new(@cursor.action, @cursor.name)
+      @head = @cursor
+      self
+    end
+
     def start!(flo_init = nil)
       @ctx = flo_init if flo_init
       @cursor = @head
-      @cursor.execute({}, @ctx)
+      @cursor.execute({ }, @ctx)
     end
 
   end
@@ -90,7 +98,7 @@ module Flo
       while output.kind_of?(FloStep) || output.respond_to?(:execute)
         output = output.execute(input, ctx)
       end
-      # otherwise continue on down to the next step
+      # otherwise continue on down to the next step (should only be one I think)
       next_steps.each do |step|
         output = step.execute(output, ctx)
       end
@@ -109,5 +117,20 @@ module Flo
     end
 
   end
+
+  ##
+  # A FloStep that iterates on the contained action as long as output is not nil
+  class IteratingFloStep < FloStep
+    def execute(input, ctx)
+      # while our iterable action continues to emit...
+      while (output = action.execute(input, ctx)) do
+        # send output down the line
+        next_steps.each do |step|
+          step.execute(output, ctx)
+        end
+      end
+    end
+  end
+
 end
 

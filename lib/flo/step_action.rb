@@ -12,10 +12,11 @@ class StepAction
     @handler = proc
   end
 
-  def self.from_obj(proc)
-    return FloStepAction.new(proc) if proc.respond_to?(:flo_step) # TODO check signature?
-    return ProcStepAction.new(proc) if proc.kind_of? Proc
-    raise ArgumentError.new "can't create a StepAction from #{proc.inspect}"
+  def self.from_obj(action)
+    return action if action.kind_of? StepAction # Already wrapped
+    return FloStepAction.new(action) if action.respond_to?(:flo_step) # TODO check signature?
+    return ProcStepAction.new(action) if action.kind_of? Proc
+    raise ArgumentError.new "can't create a StepAction from #{action.inspect}"
   end
 
   def execute(input, ctx)
