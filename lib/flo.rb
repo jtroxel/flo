@@ -25,6 +25,7 @@ module Flo
 
     ##
     # Add a flow step into the graph
+    # TODO:  I hate this "operator," but => and -> are taken, and so is 'then'
     # === OPTIONS
     # - next_target is a hash of one, use the symbol as the name of the step and add to the index, value is the action
     #   e.g.:  >> read_file: FileReader.new
@@ -47,25 +48,49 @@ module Flo
       end
 
       step = FloStep.new(next_action, step_key, options)
+      add_step(step) # Add into index by name
+      self
+    end
+
+    alias_method :to, :>> # { my_step: some_processor }.to { some_other_step: some_other_processor }
+
+    def add_step(step)
       @head ||= step
       @cursor << step if @cursor # concat the step onto the last one
       @cursor = step
-      @index[step.name] = step # Add into index by name
+      @index[step.name] = step
+    end
+
+    def start_from(next_target)
+      unless @head.nil?
+        raise "flo already has a first step"
+      end
+      self >> next_target
+      self
+    end
+
+    ##
+    # collect count outputs from the previous step and then send to the next step
+    def collect(count, name=nil)
+      add_step(CollectingFloStep.new(count, name || "collect-#{@index.size}"))
       self
     end
 
     ##
     # Wrap the last step in an iterating step, repeat until next action returns null
     def *
-      @cursor = IteratingFloStep.new(@cursor.action, @cursor.name)
-      @head = @cursor
+      old = @cursor
+      @cursor = IteratingFloStep.new(@cursor.action.processor, @cursor.name)
+      @head = @cursor if @head == old
       self
     end
+
+    alias_method :send_each, :* # { my_step: some_iterating_processor }.send_each.to { some_other_step: some_other_processor }
 
     def start!(flo_init = nil)
       @ctx = flo_init if flo_init
       @cursor = @head
-      @cursor.execute({ }, @ctx)
+      @cursor.perform({ }, @ctx)
     end
 
   end
@@ -81,9 +106,13 @@ module Flo
     attr_accessor :next_steps, :name, :action
     attr_reader :err_stop
 
-    def initialize(action, name=nil, options=nil)
+    def initialize(processor, name=nil, options=nil)
+      @action = StepAction.from_obj(processor)
+      init_step(name, options)
+    end
+
+    def init_step(name, options)
       @next_steps = []
-      @action = StepAction.from_obj(action)
       @name = name || @action.name
       @err_stop = options && options[:err_stop] || false
     end
@@ -92,16 +121,17 @@ module Flo
       @next_steps << step
     end
 
-    def execute(input, ctx)
+    def perform(input, ctx)
       output = execute_action(input, ctx)
-      # If the execution of the step results in another step, do that
-      while output.kind_of?(FloStep) || output.respond_to?(:execute)
-        output = output.execute(input, ctx)
+      # If the execution of the step results in another step, do that.  for conditional next steps
+      while output.kind_of?(FloStep) || output.respond_to?(:perform)
+        output = output.perform(input, ctx)
       end
       # otherwise continue on down to the next step (should only be one I think)
       next_steps.each do |step|
-        output = step.execute(output, ctx)
+        output = step.perform(output, ctx)
       end
+      output
     end
 
     def execute_action(input, ctx)
@@ -121,16 +151,41 @@ module Flo
   ##
   # A FloStep that iterates on the contained action as long as output is not nil
   class IteratingFloStep < FloStep
-    def execute(input, ctx)
-      # while our iterable action continues to emit...
-      while (output = action.execute(input, ctx)) do
-        # send output down the line
+    def initialize(processor, name=nil, options=nil)
+      @action = IteratingStepAction.new(processor)
+      init_step(name, options)
+    end
+
+    def perform(input, ctx)
+      # iterable action emits to the block
+      action.execute(input, ctx) do |output|
+        # send each output down the line
         next_steps.each do |step|
-          step.execute(output, ctx)
+          step.perform(output, ctx)
         end
       end
     end
   end
 
+  ##
+  # A FloStep that collects outputs
+  class CollectingFloStep < FloStep
+    def initialize(count, name=nil, options=nil)
+      @buffer = []
+      @buffer_size = count
+      init_step(name, options)
+    end
+
+    def perform(input, ctx)
+      if @buffer.size < @buffer_size
+        @buffer << input
+      end
+      if @buffer.size == @buffer_size
+        next_steps.each do |step|
+          step.perform(@buffer, ctx)
+        end
+      end
+    end
+  end
 end
 

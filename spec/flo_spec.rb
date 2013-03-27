@@ -11,11 +11,10 @@ describe Flo do
     Class.new {
       @count
 
-      def flo_step(input, ctx, action=nil)
-        @count ||= 0
-        @count += 1
-        return @count if @count < 5
-        nil
+      def execute(input, ctx, &block)
+        (1..5).each do |count|
+          block.yield(count)
+        end
       end
     }
   end
@@ -23,7 +22,7 @@ describe Flo do
 
   let(:proc_class) do
     Class.new do
-      def flo_step(input, ctx, action=nil)
+      def execute(input, ctx)
         puts "New Processor!"
         input
       end
@@ -52,8 +51,8 @@ describe Flo do
 
       flo >> step
       flo_step = flo.index['Flo']
-      flo_step.action.handler.should eql step
-      flo_step.action.should be_kind_of FloStepAction
+      flo_step.action.processor.should eql step
+      flo_step.action.should be_kind_of StepAction
 
     end
 
@@ -68,8 +67,8 @@ describe Flo do
     it "should add multiple processors to the graph" do
 
       flo >> { step1: simple_proc_step } >> { step2: simple_proc_step }
-      flo.index[:step1].action.handler.should eql simple_proc_step
-      flo.index[:step2].action.handler.should eql simple_proc_step
+      flo.index[:step1].action.processor.should eql simple_proc_step
+      flo.index[:step2].action.processor.should eql simple_proc_step
     end
 
     # >> ->(input, ctx) {...}
@@ -103,13 +102,13 @@ describe Flo do
   describe "#start!" do
     it "should call flo_step on the first step" do
       flo >> simple_proc_step
-      simple_proc_step.should_receive(:flo_step)
+      simple_proc_step.should_receive(:execute)
       flo.start!
     end
 
     it "should pass empty input" do
       passed_input = nil
-      flo >> ->(input, ctx, action) { passed_input = input }
+      flo >> ->(input, ctx) { passed_input = input }
       flo.start!
       passed_input.should be_empty
     end
@@ -119,7 +118,7 @@ describe Flo do
       describe " >> step_one >> step_two" do
         before do
           @passed_input = nil
-          flo >> ->(input, ctx, action) { { my_data: 'hello!' } } >> ->(input, ctx, action) { @passed_input = input }
+          flo >> ->(input, ctx) { { my_data: 'hello!' } } >> ->(input, ctx) { @passed_input = input }
           flo.start!
         end
         describe "should pass results from first step into second" do
@@ -137,24 +136,43 @@ describe Flo do
             input
           end
 
-          @step2 = @proc_class.new
+          @step2 = proc_class.new
           flo >> { my_step1: step, err_stop: true } >> @step2
           # Stuff an error status into the context
           flo.head.status(flo.ctx, Flo::FloStep::ERROR)
         end
         it "should stop on error status" do
           expect { flo.start! }.to raise_error
-          @step2.should_not_receive :execute
+          @step2.should_not_receive :perform
         end
       end
       context "with IteratingStep" do
         it "should iterate calling next step" do
-          call_count = 1
-          (flo >> { my_step1: iterator }).* >> ->(input, ctx, action) {
+          call_count = 0
+          (flo >> { my_step1: iterator }).* >> ->(input, ctx) {
             call_count += 1
           }
           flo.start!
           call_count.should eql 5
+        end
+      end
+      # TODO: rewrite this betterspecs style
+      context "with CollectingStep" do
+        it "should buffer output of previous step" do
+          call_count = 0
+          output = nil
+          flo.start_from({ my_step1: iterator })
+          .send_each
+          .collect(5)
+          .to ->(input, ctx) {
+            call_count += 1
+            output = input
+          }
+
+          flo.start!
+          call_count.should eql 1
+          output.should be_a Array
+          output.size.should eql 5
         end
       end
     end
@@ -177,10 +195,10 @@ describe Flo do
     context "#execute" do
       before do
         @proc_return
-        flo >> ->(input, ctx, action) do
+        flo >> ->(input, ctx) do
           # Example of conditional logic that returns a FloStep
           if true
-            Flo::FloStep.new(->(i, c, a) { @proc_return = 'hello!' })
+            Flo::FloStep.new(->(i, c) { @proc_return = 'hello!' })
           end
         end
         flo.start!

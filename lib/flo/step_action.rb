@@ -6,26 +6,28 @@
 #
 
 class StepAction
-  attr_accessor :handler
 
-  def initialize(proc)
-    @handler = proc
+  def self.from_obj(processor)
+    return processor if processor.kind_of? StepAction # Already wrapped
+    return IteratingStepAction.new(processor) if processor.respond_to?(:execute) # TODO check signature?
+    return ProcStepAction.new(processor) if processor.kind_of? Proc
+    return StepAction.new(processor) if processor.respond_to?(:execute) # TODO check signature?
+    raise ArgumentError.new "can't create a StepAction from #{processor.inspect}"
   end
 
-  def self.from_obj(action)
-    return action if action.kind_of? StepAction # Already wrapped
-    return FloStepAction.new(action) if action.respond_to?(:flo_step) # TODO check signature?
-    return ProcStepAction.new(action) if action.kind_of? Proc
-    raise ArgumentError.new "can't create a StepAction from #{action.inspect}"
+  attr_accessor :processor
+
+  def initialize(proc)
+    @processor = proc
   end
 
   def execute(input, ctx)
-    raise "implement .execute in subclass"
+    @processor.execute(input, ctx)
   end
 
   def name
-    if @handler.respond_to?(:name)
-      return @handler.name
+    if @processor.respond_to?(:name)
+      return @processor.name
     end
     self.object_id
   end
@@ -33,24 +35,22 @@ class StepAction
 end
 
 ##
-# a StepAction that wraps a hendler that responds to flo_step
-class FloStepAction < StepAction
-
-  def execute(input, ctx)
-    @handler.flo_step(input, ctx, self)
-  end
-end
-
-##
 # a StepAction that invokes a proc
-class ProcStepAction < FloStepAction
+class ProcStepAction < StepAction
 
   def execute(input, ctx)
-    @handler.call(input, ctx, self)
+    @processor.call(input, ctx)
   end
 
   def name
     "#{object_id}-<proc>"
   end
+end
 
+##
+# An iterating action:  yields to a block until done
+class IteratingStepAction < StepAction
+  def execute(input, ctx, &block)
+    @processor.execute(input, ctx, &block)
+  end
 end

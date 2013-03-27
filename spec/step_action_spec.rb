@@ -3,21 +3,21 @@ require 'flo'
 
 describe "StepAction" do
   describe "#from_obj" do
-    it "creates FloStepAction if responds to flo_step" do
+    it "creates StepAction if responds to flo_step" do
       @proc_class = Class.new do
         def flo_step
           puts "New Processor!"
         end
       end
       action = StepAction.from_obj(@proc_class.new)
-      action.should be_a_kind_of FloStepAction
+      action.should be_a_kind_of StepAction
     end
 
     it "creates a ProcAction if typeof Proc" do
       proc = -> { puts "hi" }
       action = StepAction.from_obj(proc)
       action.should be_kind_of ProcStepAction
-      action.handler.should eql proc
+      action.processor.should eql proc
     end
   end
 
