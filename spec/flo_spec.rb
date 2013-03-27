@@ -161,7 +161,7 @@ describe Flo do
         it "should buffer output of previous step" do
           call_count = 0
           output = nil
-          flo.start_from({ my_step1: iterator })
+          flo.from({ my_step1: iterator })
           .send_each
           .collect(5)
           .to ->(input, ctx) {

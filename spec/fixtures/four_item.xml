@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<SomeContainer>
+  <Item>
+  </Item>
+  <Item>
+    two
+  </Item>
+  <Item>
+    three
+  </Item>
+  <Item>
+    <SubItem>
+      sub four
+    </SubItem>
+  </Item>
+</SomeContainer>

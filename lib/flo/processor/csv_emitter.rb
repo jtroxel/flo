@@ -1,6 +1,7 @@
-module Flo
+module Flo::Processor
   class CsvEmitter
     require "csv"
+    # TODO:  look at better_csv
 
     def initialize(filename, options)
       @filename = filename

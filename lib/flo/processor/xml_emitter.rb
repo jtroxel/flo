@@ -1,19 +1,25 @@
-module Flo
+module Flo::Processor
+  require 'saxerator'
   class XmlEmitter
-    require "saxerator"
+
+    def name
+      'row emitter XML'
+    end
 
     ##
     # filename = xml file to parse
     # tag = symbolized name of the tag to enumerate
     def initialize(filename, tag)
+      @tag = tag
       @filename = filename
-      @options = {:headers => :first_row, :row_sep => :auto}.merge(options)
       @parser = Saxerator.parser(File.new(filename))
     end
 
     def execute(input, ctx)
-      @parser.for_tag(tag.to_sym).each  do |row|
-        yield row
+      @parser.for_tag(@tag.to_sym).each do |row|
+        if block_given?
+          yield row
+        end
       end
     end
   end

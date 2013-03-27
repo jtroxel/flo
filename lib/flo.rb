@@ -61,7 +61,7 @@ module Flo
       @index[step.name] = step
     end
 
-    def start_from(next_target)
+    def from(next_target)
       unless @head.nil?
         raise "flo already has a first step"
       end
