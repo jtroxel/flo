@@ -52,7 +52,7 @@ describe Flo do
       flo >> step
       flo_step = flo.index['Flo']
       flo_step.action.processor.should eql step
-      flo_step.action.should be_kind_of StepAction
+      flo_step.action.should be_kind_of Flo::StepAction
 
     end
 
@@ -79,7 +79,7 @@ describe Flo do
         obj.name =~ /<proc>/
       }
       found.should_not be_nil
-      found.action.should be_kind_of ProcStepAction
+      found.action.should be_kind_of Flo::ProcStepAction
     end
     # >> { my_step1: step, err_stop: true }
     it "should add stop actions" do

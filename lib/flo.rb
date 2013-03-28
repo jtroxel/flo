@@ -122,7 +122,11 @@ module Flo
     end
 
     def perform(input, ctx)
-      output = execute_action(input, ctx)
+      begin
+        output = execute_action(input, ctx)
+      rescue => e
+        return nil
+      end
       # If the execution of the step results in another step, do that.  for conditional next steps
       while output.kind_of?(FloStep) || output.respond_to?(:perform)
         output = output.perform(input, ctx)
@@ -142,8 +146,12 @@ module Flo
       output
     end
 
-    def status(ctx, stat)
+    def set_status(ctx, stat)
       ctx[:step][:status] = stat
+    end
+
+    def status(ctx)
+      ctx[:step][:status]
     end
 
   end
