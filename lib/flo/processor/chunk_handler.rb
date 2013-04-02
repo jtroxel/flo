@@ -1,5 +1,9 @@
 module Flo
+  # Module to mix in methods for handling chunks (of rows)
   module ChunkHandler
+
+    ##
+    # Split an array of input, execute each, and combine output into a new array
     def handle_chunk(input, ctx)
       output = []
       if (input.kind_of? Array)
