@@ -25,7 +25,7 @@ module Flo
 
     ##
     # Add a flow step into the graph
-    # TODO:  I hate this "operator," but => and -> are taken, and so is 'then'
+    # TODO:  I hate this "operator," but => and -> are taken. 'to' might be easier to read but not as pseudo-graphical
     # === OPTIONS
     # - next_target is a hash of one, use the symbol as the name of the step and add to the index, value is the action
     #   e.g.:  >> read_file: FileReader.new
@@ -124,8 +124,9 @@ module Flo
     def perform(input, ctx)
       begin
         output = execute_action(input, ctx)
+      # If exceptions are not handled in the processor...
       rescue => e
-        return nil
+        puts e.message
       end
       # If the execution of the step results in another step, do that.  for conditional next steps
       while output.kind_of?(FloStep) || output.respond_to?(:perform)
