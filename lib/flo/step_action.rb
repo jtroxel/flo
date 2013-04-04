@@ -9,7 +9,7 @@ module Flo
 
     def self.from_obj(processor)
       return processor if processor.kind_of? StepAction # Already wrapped
-      return IteratingStepAction.new(processor) if processor.respond_to?(:execute) # TODO check signature?
+      #return IteratingStepAction.new(processor) if processor.respond_to?(:execute) # TODO check signature?
       return ProcStepAction.new(processor) if processor.kind_of? Proc
       return StepAction.new(processor) if processor.respond_to?(:execute) # TODO check signature?
       raise ArgumentError.new "can't create a StepAction from #{processor.inspect}"

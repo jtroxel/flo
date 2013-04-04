@@ -3,22 +3,9 @@ require "flo"
 
 describe Flo do
 
-  attr :flo, :simple_proc_step
+  attr :flo, :simple_proc
 
   let(:flo) { Flo::Flo.new }
-
-  let(:it_class) do
-    Class.new {
-      @count
-
-      def execute(input, ctx, &block)
-        (1..5).each do |count|
-          block.yield(count)
-        end
-      end
-    }
-  end
-  let(:iterator) { it_class.new }
 
   let(:proc_class) do
     Class.new do
@@ -28,7 +15,18 @@ describe Flo do
       end
     end
   end
-  let(:simple_proc_step) { proc_class.new }
+  let(:simple_proc) { proc_class.new }
+
+  let(:it_class) do
+    Class.new {
+      def execute(input, ctx, &block)
+        (1..5).each do |count|
+          block.yield(count)
+        end
+      end
+    }
+  end
+  let(:iterator) { it_class.new }
 
   describe '#>> to chain steps' do
 
@@ -37,13 +35,13 @@ describe Flo do
 
     # >> MyHandler.new
     it "should add a step processor object to the index" do
-      flo >> simple_proc_step
+      flo >> simple_proc
       flo.index.should include({ flo.cursor.name => flo.cursor })
     end
 
     # >> MyHandler1.new
     it "should add a step action object to the flow" do
-      step = simple_proc_step
+      step = simple_proc
 
       def step.name
         "Flo"
@@ -66,9 +64,9 @@ describe Flo do
     # >> handler_1 >> handler_2
     it "should add multiple processors to the graph" do
 
-      flo >> { step1: simple_proc_step } >> { step2: simple_proc_step }
-      flo.index[:step1].action.processor.should eql simple_proc_step
-      flo.index[:step2].action.processor.should eql simple_proc_step
+      flo >> { step1: simple_proc } >> { step2: simple_proc }
+      flo.index[:step1].action.processor.should eql simple_proc
+      flo.index[:step2].action.processor.should eql simple_proc
     end
 
     # >> ->(input, ctx) {...}
@@ -83,7 +81,7 @@ describe Flo do
     end
     # >> { my_step1: step, err_stop: true }
     it "should add stop actions" do
-      flo >> { my_step1: simple_proc_step, err_stop: true }
+      flo >> { my_step1: simple_proc, err_stop: true }
       # TODO
     end
 
@@ -101,8 +99,8 @@ describe Flo do
 
   describe "#start!" do
     it "should call flo_step on the first step" do
-      flo >> simple_proc_step
-      simple_proc_step.should_receive(:execute)
+      flo >> simple_proc
+      simple_proc.should_receive(:execute)
       flo.start!
     end
 
@@ -130,20 +128,22 @@ describe Flo do
       # self >> {my_step1: MyHandler1.new, err_stop: true} >> my_step2: MyHandler2.new
       describe "ERR_STOP: >> my_step1: MyHandler1.new, err_stop: true >> step_two" do
         before do
-          step = simple_proc_step
+          step = simple_proc
 
           def step.flo_step(input, ctx, action)
             input
           end
 
-          @step2 = proc_class.new
-          flo >> { my_step1: step, err_stop: true } >> @step2
+          @action2 = proc_class.new
+          flo >> { my_step1: step, err_stop: true } >> { my_step2: @action2 }
           # Stuff an error status into the context
-          flo.head.status(flo.ctx, Flo::FloStep::ERROR)
+          flo.head.set_status(flo.ctx, Flo::FloStep::ERROR)
+          @step2 = flo.cursor
         end
         it "should stop on error status" do
-          expect { flo.start! }.to raise_error
+          #expect { flo.start! }.to raise_error
           @step2.should_not_receive :perform
+          flo.start!
         end
       end
       context "with IteratingStep" do

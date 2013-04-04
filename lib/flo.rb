@@ -100,34 +100,49 @@ module Flo
   # A node in the execution graph of a flo.  Keeps a StepAction and members to organize the action in the flo
   class FloStep
 
+    RUNNING = 'running'
     ERROR = 'error'
     SUCCESS = 'success'
 
-    attr_accessor :next_steps, :name, :action
-    attr_reader :err_stop
+    attr_accessor :next_steps, :name, :action, :err_stop, :on_err, :stop
 
     def initialize(processor, name=nil, options=nil)
-      @action = StepAction.from_obj(processor)
+      self.action = StepAction.from_obj(processor)
+      self.stop = false
       init_step(name, options)
     end
 
     def init_step(name, options)
-      @next_steps = []
-      @name = name || @action.name
-      @err_stop = options && options[:err_stop] || false
+      self.next_steps = []
+      self.name = name || @action.name
+      self.err_stop = options && options[:err_stop] || false
+      if options && options[:on_err]
+        self.err_stop = true
+        self.on_err = options[:on_err]
+      end
+    end
+
+    def stop?
+      stop
     end
 
     def << (step)
       @next_steps << step
     end
 
+    ##
+    # Perform the step's action
+    # TODO:  should ctx be an object wrapping hash with methods that hide the structure of the data?
     def perform(input, ctx)
       begin
         output = execute_action(input, ctx)
-      # If exceptions are not handled in the processor...
+          # If exceptions are not handled in the processor...
       rescue => e
         puts e.message
       end
+
+      return nil if stop?
+
       # If the execution of the step results in another step, do that.  for conditional next steps
       while output.kind_of?(FloStep) || output.respond_to?(:perform)
         output = output.perform(input, ctx)
@@ -140,11 +155,25 @@ module Flo
     end
 
     def execute_action(input, ctx)
+      reset(ctx)
+
       output = action.execute(input, ctx)
-      if @err_stop && ctx[:step][:status] == ERROR
-        raise "Stop On Error" # TODO: create an exception and add handling
+      if @err_stop && status(ctx) == ERROR
+        self.stop = true
+        if on_err
+          on_err.call(output, ctx)
+        else
+          raise "Stop On Error" # TODO: create an exception and add handling
+        end
       end
       output
+    end
+
+    def reset(ctx)
+      set_status(ctx, RUNNING)
+      ctx[:step][:status_message] = nil
+      ctx[:step][:errors] = nil
+      self.stop = false
     end
 
     def set_status(ctx, stat)
