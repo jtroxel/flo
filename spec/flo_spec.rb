@@ -55,10 +55,10 @@ describe Flo do
     end
 
     it "should not allow 2 actions with the same name" do
-      expect { flo >> { step1: simple_proc_step } >> { step1: simple_proc_step } }.should raise_error
+      expect { flo >> { step1: simple_proc } >> { step1: simple_proc } }.should raise_error
     end
     it "should not allow 2 anonymous actions pointing to the same handler" do
-      expect { flo >> simple_proc_step >> simple_proc_step }.should_not raise_error
+      expect { flo >> simple_proc >> simple_proc }.should_not raise_error
     end
 
     # >> handler_1 >> handler_2
@@ -130,14 +130,10 @@ describe Flo do
         before do
           step = simple_proc
 
-          def step.flo_step(input, ctx, action)
-            input
-          end
-
           @action2 = proc_class.new
-          flo >> { my_step1: step, err_stop: true } >> { my_step2: @action2 }
+          flo >> { my_step1: ->(input, ctx) { ctx[:step][:status] = 'error' }, err_stop: true } >> { my_step2: @action2 }
           # Stuff an error status into the context
-          flo.head.set_status(flo.ctx, Flo::FloStep::ERROR)
+          #flo.head.set_status(flo.ctx, Flo::FloStep::ERROR)
           @step2 = flo.cursor
         end
         it "should stop on error status" do
