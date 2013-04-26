@@ -149,7 +149,7 @@ describe Flo do
             call_count += 1
           }
           flo.start!
-          call_count.should eql 5
+          call_count.should eql 6 # 5 iterations plus the nil signal
         end
       end
       # TODO: rewrite this betterspecs style
@@ -166,7 +166,7 @@ describe Flo do
           }
 
           flo.start!
-          call_count.should eql 1
+          call_count.should eql 2 # Iterator sends nil when done
           output.should be_a Array
           output.size.should eql 5
         end

@@ -17,8 +17,8 @@ module Flo
     # - step
     #   - status
     def initialize(options=nil)
-      @index = { }
-      @ctx = options || { flow: { }, step: { } }
+      @index = {}
+      @ctx = options || { flow: {}, step: {} }
       @head # First step
       @cursor # last step, either added or executed depending
     end
@@ -90,7 +90,7 @@ module Flo
     def start!(flo_init = nil)
       @ctx = flo_init if flo_init
       @cursor = @head
-      @cursor.perform({ }, @ctx)
+      @cursor.perform({}, @ctx)
     end
 
   end
@@ -135,10 +135,11 @@ module Flo
     # TODO:  should ctx be an object wrapping hash with methods that hide the structure of the data?
     def perform(input, ctx)
       begin
-        output = execute_action(input, ctx)
+        output = execute_action(input, ctx) if input # Only execute with input.  TODO better signal for done
           # If exceptions are not handled in the processor...
       rescue => e
         puts e.message
+        puts e.backtrace[0..15].join("\n")
       end
 
       return nil if stop?
@@ -148,6 +149,12 @@ module Flo
         output = output.perform(input, ctx)
       end
       # otherwise continue on down to the next step (should only be one I think)
+      output = perform_all(output, ctx)
+      output
+    end
+
+    def perform_all(input, ctx)
+      output = input
       next_steps.each do |step|
         output = step.perform(output, ctx)
       end
@@ -198,15 +205,17 @@ module Flo
       # iterable action emits to the block
       action.execute(input, ctx) do |output|
         # send each output down the line
-        next_steps.each do |step|
-          step.perform(output, ctx)
-        end
+        perform_all(output, ctx)
       end
+      # Send nil down the line.  TODO:  create done signal?
+      perform_all(nil, ctx)
     end
   end
 
   ##
   # A FloStep that collects outputs
+  # TODO:  how to handle leftovers...  iterators will just stop calling next steps and we'll have junk in the buffer
+  #          Maybe a Flo needs to call flo_done or something on all participants that receive it
   class CollectingFloStep < FloStep
     def initialize(count, name=nil, options=nil)
       @buffer = []
@@ -215,13 +224,14 @@ module Flo
     end
 
     def perform(input, ctx)
-      if @buffer.size < @buffer_size
+      if @buffer.size < @buffer_size && input
         @buffer << input
       end
-      if @buffer.size == @buffer_size
+      if @buffer.size == @buffer_size || input.nil?
         next_steps.each do |step|
           step.perform(@buffer, ctx)
         end
+        @buffer = []
       end
     end
   end
