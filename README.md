@@ -1,8 +1,7 @@
 Flo
 ===
-
-# Note
-*The following is presently an exercise in README Driven Design, though it is almost usable*
+Update:  
+What started as an exercise in Readme-Driven Design, has become something I am using on a couple projects...
 
 Flo is a simple library for composing extensible multi-step procedures.  Flo attempts to provide a fluent interface for creating step-by-step processes or algorithms using plugable steps, and an interface and conventions for interaction between the steps.  Flo is probably most applicable to batch jobs or background processing, but it is certainly not limited to that.
 
